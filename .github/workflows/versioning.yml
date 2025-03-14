@@ -5,29 +5,35 @@ on:
     outputs:
       version:
         description: "The determined next version"
-        value: ${{ jobs.determine-version.outputs.version }}
+        value: ${{ jobs.determine_next_version.outputs.version }}
 
 jobs:
-  determine-version:
+  determine_next_version:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.versioning.outputs.version }}
+      version: ${{ steps.calculate_version.outputs.version }}
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all tags for versioning
+          fetch-depth: 0
 
-      - name: Fetch tags
+      - name: Fetch Git Tags
         run: git fetch --tags
 
-      - name: Determine next version
-        id: versioning
+      - name: Calculate Next Version
+        id: calculate_version
         run: |
+          # Get the latest tag or default to 0.0.0
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
-          IFS='.' read -r major minor patch <<< "$latest_tag"
-          patch=$((patch + 1))  # Default to patch bump
 
+          # Parse the version number
+          IFS='.' read -r major minor patch <<< "$latest_tag"
+
+          # Default to a patch bump
+          patch=$((patch + 1))
+
+          # Check commit message for #major or #minor
           commit_message=$(git log -1 --pretty=%B)
           if [[ "$commit_message" == *"#major"* ]]; then
             major=$((major + 1))
@@ -38,12 +44,14 @@ jobs:
             patch=0
           fi
 
+          # Append pre-release suffix if not on main branch
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             pre_release=""
           else
             pre_release="-alpha.${{ github.run_number }}"
           fi
 
+          # Construct the new version
           new_version="${major}.${minor}.${patch}${pre_release}"
           echo "version=$new_version" >> $GITHUB_OUTPUT
-          echo "Determined version: $new_version"
+          echo "✅ Determined version: $new_version"
