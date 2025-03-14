@@ -1,0 +1,49 @@
+name: Determine Next Version
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: "The determined next version"
+        value: ${{ jobs.determine-version.outputs.version }}
+
+jobs:
+  determine-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.versioning.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all tags for versioning
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Determine next version
+        id: versioning
+        run: |
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
+          IFS='.' read -r major minor patch <<< "$latest_tag"
+          patch=$((patch + 1))  # Default to patch bump
+
+          commit_message=$(git log -1 --pretty=%B)
+          if [[ "$commit_message" == *"#major"* ]]; then
+            major=$((major + 1))
+            minor=0
+            patch=0
+          elif [[ "$commit_message" == *"#minor"* ]]; then
+            minor=$((minor + 1))
+            patch=0
+          fi
+
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            pre_release=""
+          else
+            pre_release="-alpha.${{ github.run_number }}"
+          fi
+
+          new_version="${major}.${minor}.${patch}${pre_release}"
+          echo "version=$new_version" >> $GITHUB_OUTPUT
+          echo "Determined version: $new_version"

@@ -1,0 +1,33 @@
+name: Notify Failure
+
+on:
+  workflow_call:
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Slack Webhook
+        run: |
+          if [ -z "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+            echo "⚠️ SLACK_WEBHOOK_URL is not set! Skipping Slack notification."
+            exit 0
+          fi
+
+      - name: Send failure notification to Slack
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          GITHUB_REPO: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_COMMIT: ${{ github.sha }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data "{
+            \"text\": \"🚨 *Build Failure in ${GITHUB_REPO}* 🚨\n
+            *Commit:* <https://github.com/${GITHUB_REPO}/commit/${GITHUB_COMMIT}|${GITHUB_COMMIT:0:7}>\n
+            *Workflow Run:* <https://github.com/${GITHUB_REPO}/actions/runs/${GITHUB_RUN_ID}>\n
+            *Branch:* ${{ github.ref_name }}\n
+            Please check the logs and fix the issue. 🚑\"
+          }" $SLACK_WEBHOOK_URL
