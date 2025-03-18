@@ -89,7 +89,7 @@ jobs:
           pip install flake8 pylint pytest
           
       - name: Run Snyk Security Scan
-        uses: snyk/actions/python-3.10@master
+        uses: snyk/actions/python-3.9@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
