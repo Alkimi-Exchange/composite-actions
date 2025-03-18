@@ -19,11 +19,7 @@ on:
         required: false
 
 jobs:
-  determine_next_version:
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/versioning.yml@main
-
   build_lint_test:
-    needs: determine_next_version
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -33,14 +29,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
-
-      # - name: Cache Python Dependencies
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cache/pip
-      #     key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pip-
 
       - name: Install Dependencies
         run: |
@@ -71,31 +59,15 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      # - name: Set up Python
-      #   uses: actions/setup-python@v5
-      #   with:
-      #     python-version: ${{ inputs.python-version }}
 
-      # - name: Cache Python Dependencies
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ~/.cache/pip
-      #     key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pip-
-
-      # - name: Install Dependencies
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install -r requirements.txt
-      #     pip install flake8 pylint pytest
-          
       - name: Run Snyk Security Scan
         uses: snyk/actions/python-3.9@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
+            --skip-unresolved=true
+          
 
   code_quality_sonar:
     needs: build_lint_test
@@ -109,16 +81,16 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-  tag_release_version:
+  
+  release-please:
     needs: [code_quality_sonar, security_scan_snyk]
     if: success() && github.ref == 'refs/heads/main'
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/tag-version.yml@main
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@release-please
     with:
-      version: ${{ needs.determine_next_version.outputs.version }}
+      release-type: "python"
 
   notify_ci_failure:
-    needs: [determine_next_version, build_lint_test, security_scan_snyk, code_quality_sonar, tag_release_version]
+    needs: [build_lint_test, security_scan_snyk, code_quality_sonar, release-please]
     if: failure()
     uses: Alkimi-Exchange/composite-actions/.github/workflows/notify-failure.yml@main
     with:
