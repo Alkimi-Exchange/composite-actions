@@ -32,25 +32,51 @@ jobs:
       - name: Identify merged branches
         id: merged
         run: |
-          git fetch --prune
-          DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+          git fetch --all --prune
+          
+          DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          if [[ -z "$DEFAULT_BRANCH" ]]; then
+            echo "❌ Failed to determine the default branch. Exiting..." >&2
+            exit 1
+          fi
+          echo "✅ Default branch detected: $DEFAULT_BRANCH"
+          
+          echo "🔄 Fetching remote branches..."
+          git branch -r
+          
           MERGED_BRANCHES=$(git branch -r --merged origin/$DEFAULT_BRANCH | grep -vE "origin/($DEFAULT_BRANCH|HEAD)" | sed 's/origin\///')
 
           if [[ -n "$MERGED_BRANCHES" ]]; then
+            echo "✅ Merged branches found:"
+            echo "$MERGED_BRANCHES"
             echo "merged_branches<<EOF" >> $GITHUB_ENV
             echo "$MERGED_BRANCHES" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
+          else
+            echo "✅ No merged branches found."
           fi
 
       - name: Identify unmerged branches
         id: unmerged
         run: |
+          echo "🔍 Verifying remote branches exist before checking unmerged branches..."
+          git branch -r
+          DEFAULT_BRANCH=$(git remote show origin | awk '/HEAD branch/ {print $NF}')
+          if [[ -z "$DEFAULT_BRANCH" ]]; then
+            echo "❌ Default branch is empty. Skipping unmerged branch detection." >&2
+            exit 1
+          fi
+          
           UNMERGED_BRANCHES=$(git branch -r --no-merged origin/$DEFAULT_BRANCH | grep -vE "origin/($DEFAULT_BRANCH|HEAD)" | sed 's/origin\///')
-
+          
           if [[ -n "$UNMERGED_BRANCHES" ]]; then
+            echo "🚨 Unmerged branches detected:"
+            echo "$UNMERGED_BRANCHES"
             echo "unmerged_branches<<EOF" >> $GITHUB_ENV
             echo "$UNMERGED_BRANCHES" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
+          else
+            echo "✅ No unmerged branches found."
           fi
 
       - name: Delete merged branches (Optional)
@@ -79,8 +105,8 @@ jobs:
             });
 
       - name: Send Slack Notification (Optional)
-        if: inputs.NOTIFY_SLACK == 'true' && env.unmerged_branches != ''
+        if: inputs.NOTIFY_SLACK == 'true' && (env.unmerged_branches != '' || env.merged_branches != '')
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: "🚨 The following branches have unmerged changes in *${{ github.repository }}*:\n\n```${{ env.unmerged_branches }}```"
+          SLACK_MESSAGE: "🚨 *Branch Cleanup Summary for ${{ github.repository }}*:\n\n✅ The following branches have been merged and can be safely deleted:\n\n```${{ env.merged_branches }}```\n\n🚨 The following branches have unmerged changes:\n\n```${{ env.unmerged_branches }}```"
