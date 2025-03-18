@@ -8,14 +8,6 @@ on:
         required: false
         default: "3.10"
         type: string
-      sonar-project-key:
-        description: "SonarQube project key"
-        required: true
-        type: string
-      sonar-organization:
-        description: "SonarQube organization"
-        required: true
-        type: string
     secrets:
       SONAR_TOKEN:
         required: true
