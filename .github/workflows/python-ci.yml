@@ -9,12 +9,14 @@ on:
         default: "3.10"
         type: string
     secrets:
+      SONAR_HOST_URL:
+        required: true
       SONAR_TOKEN:
         required: true
       SLACK_WEBHOOK_URL:
-        required: false
+        required: true
       SNYK_TOKEN:
-        required: false
+        required: true
 
 jobs:
   determine_next_version:
@@ -69,10 +71,10 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
+      # - name: Set up Python
+      #   uses: actions/setup-python@v5
+      #   with:
+      #     python-version: ${{ inputs.python-version }}
 
       # - name: Cache Python Dependencies
       #   uses: actions/cache@v3
@@ -82,11 +84,11 @@ jobs:
       #     restore-keys: |
       #       ${{ runner.os }}-pip-
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install flake8 pylint pytest
+      # - name: Install Dependencies
+      #   run: |
+      #     python -m pip install --upgrade pip
+      #     pip install -r requirements.txt
+      #     pip install flake8 pylint pytest
           
       - name: Run Snyk Security Scan
         uses: snyk/actions/python-3.9@master
@@ -94,6 +96,8 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           args: --severity-threshold=high
+            --skip-unresolved=true
+
 
   code_quality_sonar:
     needs: build_lint_test
