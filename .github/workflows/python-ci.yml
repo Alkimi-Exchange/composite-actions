@@ -37,17 +37,18 @@ jobs:
           pip install flake8 pylint pytest
 
       - name: Run Flake8 Linter
-        run: flake8 . --count --show-source --statistics || true
+        continue-on-error: true  # Allows failures but still reports them
+        run: flake8 . --count --show-source --statistics
 
       - name: Run Pylint (Fail if Score < 5)
-        run: pylint $(git ls-files '*.py') --fail-under=5 || true
+        continue-on-error: true
+        run: pylint $(git ls-files '*.py') --fail-under=5
 
       - name: Run Tests with Pytest
-        run: pytest --junitxml=test-results.xml || true
+        run: pytest --junitxml=test-results.xml
 
       - name: Upload Test Results
         uses: actions/upload-artifact@v4
-        continue-on-error: true
         with:
           name: test-results
           path: test-results.xml
@@ -65,9 +66,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
-            --skip-unresolved=true
-          
+          args: --severity-threshold=high --skip-unresolved=true
 
   code_quality_sonar:
     needs: build_lint_test
@@ -81,7 +80,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  
+
   release-please:
     needs: [code_quality_sonar, security_scan_snyk]
     if: success() && github.ref == 'refs/heads/main'
