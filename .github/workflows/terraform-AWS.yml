@@ -137,6 +137,8 @@ jobs:
     name: Notify on Failure
     needs: [terraform_fmt, terraform_validate, terraform_plan, terraform_apply]
     if: failure()
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify-failure.yml@main
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify.yml@release-please
+    with:
+      SLACK_MESSAGE: "🚨 Build failed in *${{ github.repository }}* on `${{ github.ref_name }}`"
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

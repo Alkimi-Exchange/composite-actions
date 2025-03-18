@@ -92,7 +92,7 @@ jobs:
   notify_ci_failure:
     needs: [build_lint_test, security_scan_snyk, code_quality_sonar, release-please]
     if: failure()
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify-failure.yml@main
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify.yml@release-please
     with:
       SLACK_MESSAGE: "🚨 Build failed in *${{ github.repository }}* on `${{ github.ref_name }}`"
     secrets:
