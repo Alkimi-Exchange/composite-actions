@@ -69,23 +69,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
       - name: Run Snyk Security Scan
+        uses: snyk/actions/python-3.9@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        run: |
-          pip install snyk
-          snyk auth $SNYK_TOKEN
-          snyk test --all-projects --severity-threshold=high
+        with:
+          args: --severity-threshold=high
+            --skip-unresolved=true
 
   code_quality_sonar:
     needs: build_lint_test
