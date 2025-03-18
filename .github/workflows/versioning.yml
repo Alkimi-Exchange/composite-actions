@@ -26,32 +26,54 @@ jobs:
         run: |
           # Get the latest tag or default to 0.0.0
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "0.0.0")
-
+      
           # Parse the version number
           IFS='.' read -r major minor patch <<< "$latest_tag"
-
-          # Default to a patch bump
-          patch=$((patch + 1))
-
-          # Check commit message for #major or #minor
+      
+          # Get the latest commit message
           commit_message=$(git log -1 --pretty=%B)
-          if [[ "$commit_message" == *"#major"* ]]; then
-            major=$((major + 1))
-            minor=0
-            patch=0
-          elif [[ "$commit_message" == *"#minor"* ]]; then
-            minor=$((minor + 1))
-            patch=0
+      
+          # Default bump type is "patch"
+          bump="patch"
+      
+          # Determine bump type from Conventional Commit message
+          if [[ "$commit_message" == *"BREAKING CHANGE"* ]] || [[ "$commit_message" =~ (feat|fix)!\: ]]; then
+            bump="major"
+          elif [[ "$commit_message" =~ ^feat(\(.*\))?\: ]]; then
+            bump="minor"
           fi
-
+      
+          # Apply the version bump
+          case $bump in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+      
+          # Extract and normalize branch name
+          branch_name="${{ github.ref }}"
+          branch_name="${branch_name#refs/heads/}"
+          branch_name="${branch_name//\//-}"
+          branch_name=$(echo "$branch_name" | tr '[:upper:]' '[:lower:]')
+      
           # Append pre-release suffix if not on main branch
-          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+          if [[ "$branch_name" == "main" ]]; then
             pre_release=""
           else
-            pre_release="-alpha.${{ github.run_number }}"
+            pre_release="-$branch_name.${{ github.run_number }}"
           fi
-
+      
           # Construct the new version
           new_version="${major}.${minor}.${patch}${pre_release}"
           echo "version=$new_version" >> $GITHUB_OUTPUT
           echo "✅ Determined version: $new_version"
+      
