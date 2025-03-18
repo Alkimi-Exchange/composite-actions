@@ -90,23 +90,38 @@ jobs:
         if: env.unmerged_branches != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ github.token }}
           script: |
             const { owner, repo } = context.repo;
             const branches = `${process.env.unmerged_branches}`;
             const issueTitle = "🚨 Unmerged Branches Detected";
             const issueBody = `The following branches have unmerged changes:\n\n\`\`\`\n${branches}\n\`\`\``;
 
-            await github.rest.issues.create({
+            const issue = await github.rest.issues.create({
               owner,
               repo,
               title: issueTitle,
               body: issueBody
             });
+            console.log(`Issue created: ${issue.data.html_url}`);
+            
+            core.exportVariable("issue_url", issue.data.html_url);
 
       - name: Send Slack Notification (Optional)
         if: inputs.NOTIFY_SLACK == 'true' && (env.unmerged_branches != '' || env.merged_branches != '')
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_MESSAGE: "🚨 *Branch Cleanup Summary for ${{ github.repository }}*:\n\n✅ The following branches have been merged and can be safely deleted:\n\n```${{ env.merged_branches }}```\n\n🚨 The following branches have unmerged changes:\n\n```${{ env.unmerged_branches }}```"
+          SLACK_MESSAGE: |
+            🚀 *Branch Cleanup Summary for ${{ github.repository }}* 🚀
+            ✅ *Merged Branches (Safe to Delete)*:
+                The following branches have been successfully merged and can be safely removed:
+                ```
+                ${{ env.merged_branches }}
+                ```
+            🚨 *Unmerged Branches (Require Attention)*:
+                The following branches have unmerged changes and need review:
+                ```
+                ${{ env.unmerged_branches }}
+                ```
+            🔗 *Action Required*: <${{ env.issue_url }}|View GitHub Issue>
