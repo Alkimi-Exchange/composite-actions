@@ -1,75 +1,75 @@
 name: Cleanup Stale Branches
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "0 3 * * 1" # Runs every Monday at 3 AM UTC
+  workflow_call:
+    inputs:
+      DELETE_MERGED:
+        description: "Set to true to delete merged branches"
+        required: false
+        default: "false"
+        type: string
+      NOTIFY_SLACK:
+        description: "Set to true to send Slack notifications"
+        required: false
+        default: "false"
+        type: string
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: false
 
 jobs:
   cleanup-branches:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write  # Required to create a GitHub issue for unmerged branches
+      issues: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to check merges
+          fetch-depth: 0  
 
       - name: Identify merged branches
         id: merged
         run: |
           git fetch --prune
           DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
-          echo "Default branch: $DEFAULT_BRANCH"
-          
           MERGED_BRANCHES=$(git branch -r --merged origin/$DEFAULT_BRANCH | grep -vE "origin/($DEFAULT_BRANCH|HEAD)" | sed 's/origin\///')
-          
+
           if [[ -n "$MERGED_BRANCHES" ]]; then
-            echo "Merged branches safe for deletion:"
-            echo "$MERGED_BRANCHES"
             echo "merged_branches<<EOF" >> $GITHUB_ENV
             echo "$MERGED_BRANCHES" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
-          else
-            echo "No merged branches found."
           fi
 
       - name: Identify unmerged branches
         id: unmerged
         run: |
           UNMERGED_BRANCHES=$(git branch -r --no-merged origin/$DEFAULT_BRANCH | grep -vE "origin/($DEFAULT_BRANCH|HEAD)" | sed 's/origin\///')
-          
+
           if [[ -n "$UNMERGED_BRANCHES" ]]; then
-            echo "Unmerged branches found:"
-            echo "$UNMERGED_BRANCHES"
             echo "unmerged_branches<<EOF" >> $GITHUB_ENV
             echo "$UNMERGED_BRANCHES" >> $GITHUB_ENV
             echo "EOF" >> $GITHUB_ENV
-          else
-            echo "No unmerged branches found."
           fi
 
       - name: Delete merged branches (Optional)
-        if: env.merged_branches != ''
+        if: inputs.DELETE_MERGED == 'true' && env.merged_branches != ''
         run: |
           for branch in ${{ env.merged_branches }}; do
-            #echo "Deleting branch: $branch"
-            #git push origin --delete "$branch"
-            echo "Please delete branch: $branch"
+            git push origin --delete "$branch"
           done
 
       - name: Create GitHub Issue for Unmerged Branches
         if: env.unmerged_branches != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ github.token }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
             const branches = `${process.env.unmerged_branches}`;
             const issueTitle = "🚨 Unmerged Branches Detected";
-            const issueBody = `The following branches have unmerged changes and need review:\n\n\`\`\`\n${branches}\n\`\`\`\n\nPlease review and take action if needed.`;
+            const issueBody = `The following branches have unmerged changes:\n\n\`\`\`\n${branches}\n\`\`\``;
 
             await github.rest.issues.create({
               owner,
@@ -79,8 +79,8 @@ jobs:
             });
 
       - name: Send Slack Notification (Optional)
-        if: env.unmerged_branches != ''
+        if: inputs.NOTIFY_SLACK == 'true' && env.unmerged_branches != ''
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_MESSAGE: "🚨 The following branches have unmerged changes in *${{ github.repository }}*:\n\n```${{ env.unmerged_branches }}```\n\nPlease review and take action."
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: "🚨 The following branches have unmerged changes in *${{ github.repository }}*:\n\n```${{ env.unmerged_branches }}```"

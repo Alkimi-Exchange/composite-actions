@@ -119,5 +119,7 @@ jobs:
     needs: [determine_next_version, build_lint_test, security_scan_snyk, code_quality_sonar, tag_release_version]
     if: failure()
     uses: Alkimi-Exchange/composite-actions/.github/workflows/notify-failure.yml@main
+    with:
+      SLACK_MESSAGE: "🚨 Build failed in *${{ github.repository }}* on `${{ github.ref_name }}`"
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

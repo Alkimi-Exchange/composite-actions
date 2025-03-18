@@ -2,33 +2,27 @@ name: Notify Slack on Failure
 
 on:
   workflow_call:
+    inputs:
+      SLACK_MESSAGE:
+        description: "Message to send to Slack"
+        required: true
+        type: string
     secrets:
       SLACK_WEBHOOK_URL:
-        required: false
+        required: true
 
 jobs:
   send_slack_notification:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
-      - name: Validate Slack Webhook
-        run: |
-          if [ -z "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
-            echo "⚠️ SLACK_WEBHOOK_URL is not set. Skipping Slack notification."
-            exit 0
-          fi
+      - name: Log Message (Debugging)
+        run: echo "Sending Slack message: ${{ inputs.SLACK_MESSAGE }}"
 
-      - name: Send Failure Notification to Slack
+      - name: Send Slack Notification
+        uses: rtCamp/action-slack-notify@v2.2.0
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-          REPO_NAME: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
-          COMMIT_SHA: ${{ github.sha }}
-          BRANCH_NAME: ${{ github.ref_name }}
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"🚨 *Build Failure in ${REPO_NAME}* 🚨\n
-            *Commit:* <https://github.com/${REPO_NAME}/commit/${COMMIT_SHA}|${COMMIT_SHA:0:7}>\n
-            *Workflow Run:* <https://github.com/${REPO_NAME}/actions/runs/${RUN_ID}>\n
-            *Branch:* ${BRANCH_NAME}\n
-            Please check the logs and fix the issue. 🚑\"
-          }" $SLACK_WEBHOOK_URL
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_MESSAGE: ${{ inputs.SLACK_MESSAGE }}
