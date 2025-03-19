@@ -22,7 +22,6 @@ jobs:
   docker_build:
     uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@release-please
     with:
-      tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
       push: true
 
   build_lint_test:

@@ -1,7 +1,7 @@
 name: Build and Push Docker Image
 description: |
   Builds and pushes a Docker image to GitHub Container Registry.
-  Supports multi-platform builds and custom build arguments.
+  Supports multi-platform builds, custom build arguments, and caching.
 
 on:
   workflow_call:
@@ -39,7 +39,9 @@ jobs:
     steps:
       - name: Convert Repository Name to Lowercase
         run: |
-            echo "IMAGE_TAG=$(echo ${{ inputs.tags }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_TAG=ghcr.io/${REPO_LOWER}:${{ github.sha }}" >> $GITHUB_ENV
+          echo "CACHE_TAG=ghcr.io/${REPO_LOWER}:cache" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
 
@@ -56,7 +58,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Build and Push with Cache
         uses: docker/build-push-action@v6
         with:
           context: ${{ inputs.context }}
@@ -64,5 +66,7 @@ jobs:
           tags: ${{ env.IMAGE_TAG }}
           platforms: ${{ inputs.platforms }}
           build-args: ${{ inputs.buildArgs }}
+          cache-from: type=registry,ref=${{ env.CACHE_TAG }}
+          cache-to: type=registry,ref=${{ env.CACHE_TAG }},mode=max
           secrets: |
             GITHUB_TOKEN=${{ github.token }}
