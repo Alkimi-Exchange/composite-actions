@@ -39,6 +39,7 @@ jobs:
 
       - name: Merge Main into Feature Branch
         run: |
+          echo "Dummy change."
           git checkout ${{ inputs.update_branch }}
           git merge origin/${{ inputs.source_branch }} -X ${{ inputs.update_strategy }} --no-edit
 
