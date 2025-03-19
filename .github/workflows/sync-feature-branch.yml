@@ -1,0 +1,46 @@
+name: Sync Feature Branch with Main (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      update_branch:
+        description: "Feature branch to sync with main"
+        required: true
+        type: string
+      source_branch:
+        description: "Source branch for sync (default: main)"
+        required: false
+        type: string
+        default: main
+      update_strategy:
+        description: "Merge strategy when resolving conflicts"
+        required: true
+        type: string
+
+jobs:
+  sync-feature-branch:
+    name: Sync Feature Branch with Main
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Source Branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_branch }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch Latest Changes
+        run: git fetch origin
+
+      - name: Merge Main into Feature Branch
+        run: |
+          git checkout ${{ inputs.update_branch }}
+          git merge origin/${{ inputs.source_branch }} -X ${{ inputs.update_strategy }} --no-edit
+
+      - name: Push Changes to Remote
+        run: git push origin ${{ inputs.update_branch }}
