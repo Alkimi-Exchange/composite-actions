@@ -36,6 +36,8 @@ jobs:
       - name: Convert Repository Name to Lowercase
         run: |
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "IMAGE_TAG=ghcr.io/${REPO_LOWER}:${SHORT_SHA}" >> $GITHUB_ENV
           echo "CACHE_TAG=ghcr.io/${REPO_LOWER}:cache" >> $GITHUB_ENV
 
       - uses: actions/checkout@v4
