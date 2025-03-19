@@ -1,0 +1,81 @@
+name: Build and Push Docker Image
+description: |
+  Builds and pushes a Docker image to GitHub Container Registry.
+  Supports multi-platform builds, custom build arguments, and caching.
+
+on:
+  workflow_call:
+    inputs:
+      buildArgs:
+        description: 'Build arguments'
+        required: false
+        type: string
+      platforms:
+        description: 'Target platforms (comma-separated)'
+        required: false
+        default: 'linux/amd64'
+        type: string
+      push:
+        description: 'Push Docker Image'
+        required: false
+        default: true
+        type: boolean
+      context:
+        description: 'Docker context'
+        required: false
+        default: '.'
+        type: string
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Convert Repository Name to Lowercase
+        run: |
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "IMAGE_TAG=ghcr.io/${REPO_LOWER}:${SHORT_SHA}" >> $GITHUB_ENV
+          echo "CACHE_TAG=ghcr.io/${REPO_LOWER}:cache" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=schedule
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short,prefix=
+
+      - name: Build and Push with Cache
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ inputs.context }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: ${{ inputs.platforms }}
+          build-args: ${{ inputs.buildArgs }}
+          cache-from: type=registry,ref=${{ env.CACHE_TAG }}
+          cache-to: type=registry,ref=${{ env.CACHE_TAG }},mode=max
+          secrets: |
+            GITHUB_TOKEN=${{ github.token }}
