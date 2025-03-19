@@ -15,10 +15,6 @@ on:
         required: false
         default: 'linux/amd64'
         type: string
-      tags:
-        description: 'Image tags (comma-separated)'
-        required: false
-        type: string
       push:
         description: 'Push Docker Image'
         required: false
