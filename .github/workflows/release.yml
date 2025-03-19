@@ -7,10 +7,16 @@ on:
         description: "release-type"
         required: true
         type: string
+    outputs:
+      version:
+        description: "version"
+        value: ${{ jobs.release-please.outputs.version }} 
 
 jobs:
   release-please:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release

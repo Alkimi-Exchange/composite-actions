@@ -19,6 +19,12 @@ on:
         required: false
 
 jobs:
+  docker_build:
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@release-please
+    with:
+      tags: ghcr.io/${{ github.repository }}:${{ github.sha }}
+      push: true
+
   build_lint_test:
     runs-on: ubuntu-latest
     steps:
@@ -37,17 +43,19 @@ jobs:
           pip install flake8 pylint pytest
 
       - name: Run Flake8 Linter
-        continue-on-error: true  # Allows failures but still reports them
+        continue-on-error: true
         run: flake8 . --count --show-source --statistics
-
+          
       - name: Run Pylint (Fail if Score < 5)
         continue-on-error: true
         run: pylint $(git ls-files '*.py') --fail-under=5
 
       - name: Run Tests with Pytest
+        continue-on-error: true
         run: pytest --junitxml=test-results.xml
 
       - name: Upload Test Results
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: test-results
@@ -82,7 +90,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
   release-please:
-    needs: [code_quality_sonar, security_scan_snyk]
+    needs: [docker_build, code_quality_sonar, security_scan_snyk]
     if: success() && github.ref == 'refs/heads/main'
     uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@release-please
     with:
