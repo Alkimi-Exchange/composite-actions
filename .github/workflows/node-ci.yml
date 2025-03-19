@@ -1,0 +1,99 @@
+name: Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        description: "Node.js version to use"
+        required: false
+        default: "20.x"
+        type: string
+    secrets:
+      SONAR_HOST_URL:
+        required: true
+      SONAR_TOKEN:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
+      SNYK_TOKEN:
+        required: false
+
+jobs:
+  docker_build:
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@release-please
+    with:
+      push: true
+
+  build_lint_test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+
+      - name: Install Dependencies
+        run: |
+          npm ci
+
+      - name: Run ESLint
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Run Tests with Jest
+        continue-on-error: true
+        run: npm test -- --ci --reporters=jest-junit
+
+      - name: Upload Test Results
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: junit.xml
+
+  security_scan_snyk:
+    needs: build_lint_test
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --skip-unresolved=true
+
+  code_quality_sonar:
+    needs: build_lint_test
+    if: success()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: sonarsource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  release-please:
+    needs: [docker_build, code_quality_sonar, security_scan_snyk]
+    if: success() && github.ref == 'refs/heads/main'
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@release-please
+    with:
+      release-type: "node"
+
+  notify_ci_failure:
+    needs: [build_lint_test, security_scan_snyk, code_quality_sonar, release-please]
+    if: failure()
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify.yml@release-please
+    with:
+      SLACK_MESSAGE: "🚨 Build failed in *${{ github.repository }}* on `${{ github.ref_name }}`"
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
