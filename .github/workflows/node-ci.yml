@@ -20,7 +20,7 @@ on:
 
 jobs:
   docker_build:
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@release-please
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@main
     with:
       push: true
 
@@ -85,14 +85,14 @@ jobs:
   release-please:
     needs: [docker_build, code_quality_sonar, security_scan_snyk]
     if: success() && github.ref == 'refs/heads/main'
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@release-please
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@main
     with:
       release-type: "node"
 
   notify_ci_failure:
     needs: [build_lint_test, security_scan_snyk, code_quality_sonar, release-please]
     if: failure()
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify.yml@release-please
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/notify.yml@main
     with:
       SLACK_MESSAGE: "🚨 Build failed in *${{ github.repository }}* on `${{ github.ref_name }}`"
     secrets:
