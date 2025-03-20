@@ -17,12 +17,16 @@ on:
         required: false
       SNYK_TOKEN:
         required: false
+      GCR_JSON_KEY:
+        required: true
 
 jobs:
   docker_build:
     uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@main
     with:
       push: true
+    secrets:
+      GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
   build_lint_test:
     runs-on: ubuntu-latest
