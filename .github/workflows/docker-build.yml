@@ -25,6 +25,10 @@ on:
         required: false
         default: '.'
         type: string
+      gcp-project-id: 
+        description: "GCP Project Id"
+        required: true
+        type: string
     secrets:
       GCR_JSON_KEY:
         required: true
@@ -34,15 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
-      # - name: Convert Repository Name to Lowercase
-      #   run: |
-      #     REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-      #     SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-      #     echo "IMAGE_TAG=gcr.io/semiotic-primer-427106-p1/${REPO_LOWER}:${SHORT_SHA}" >> $GITHUB_ENV
-      #     echo "CACHE_TAG=ghcr.io/${REPO_LOWER}:cache" >> $GITHUB_ENV
-
       - uses: actions/checkout@v4
 
       - name: Login to GCR
@@ -62,7 +58,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: gcr.io/semiotic-primer-427106-p1/${{ github.repository }}
+          images: gcr.io/${{ inputs.gcp-project-id }}/${{ github.repository }}
           tags: |
             type=sha,format=short,prefix=
 

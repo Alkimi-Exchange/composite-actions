@@ -15,7 +15,6 @@ jobs:
   send_slack_notification:
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
     steps:
       - name: Send Slack Notification
