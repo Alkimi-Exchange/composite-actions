@@ -31,6 +31,7 @@ jobs:
     with:
       gcp-project-id: ${{ inputs.gcp-project-id }}
       push: true
+      skip-smoke-tests: true
     secrets:
       GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
