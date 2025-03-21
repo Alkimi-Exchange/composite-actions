@@ -73,23 +73,21 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Run Smoke Test
+        run: |
+          echo "IMAGE_TAG=${{ steps.meta.outputs.tags }}" >> $GITHUB_ENV
+          docker-compose -f docker-compose.yml up --exit-code-from smoketest
+          docker-compose -f docker-compose.yml down --volumes
+
       - name: Scan Docker Image
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           severity: HIGH,CRITICAL
           exit-code: 1 # Fail on vulnerabilities
-
-      - name: Run Smoke Test
-        run: |
-          # Export the image tag for docker-compose
-          echo "IMAGE_TAG=${{ steps.meta.outputs.tags }}" >> $GITHUB_ENV
-          # Start the app and run the smoke test
-          docker-compose -f docker-compose.yml up --exit-code-from smoketest
-          # Clean up
-          docker-compose -f docker-compose.yml down
   
       - name: Push Docker Image
         if: success()
         run: |
           docker push ${{ steps.meta.outputs.tags }}
+          
