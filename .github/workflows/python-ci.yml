@@ -8,6 +8,11 @@ on:
         required: false
         default: "3.10"
         type: string
+      gcp-project-id: 
+        description: "GCP Project Id"
+        required: false
+        default: "semiotic-primer-427106-p1"
+        type: string
     secrets:
       SONAR_HOST_URL:
         required: true
@@ -17,12 +22,17 @@ on:
         required: false
       SNYK_TOKEN:
         required: false
+      GCR_JSON_KEY:
+        required: true
 
 jobs:
   docker_build:
     uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@main
     with:
       push: true
+      gcp-project-id: ${{ inputs.gcp-project-id }}
+    secrets:
+      GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
   build_lint_test:
     runs-on: ubuntu-latest
@@ -98,10 +108,14 @@ jobs:
 
   release-please:
     needs: [docker_build, code_quality_sonar, security_scan_snyk]
-    if: success() && github.ref == 'refs/heads/main'
+    if: success()
     uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@main
     with:
       release-type: "python"
+      gcp-project-id: ${{ inputs.gcp-project-id }}
+    secrets:
+      GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
+  
 
   notify_ci_failure:
     needs: [build_lint_test, security_scan_snyk, code_quality_sonar, release-please]
