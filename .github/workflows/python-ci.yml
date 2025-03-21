@@ -30,6 +30,7 @@ jobs:
     uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@feature/refactor
     with:
       gcp-project-id: ${{ inputs.gcp-project-id }}
+      push: true
     secrets:
       GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
