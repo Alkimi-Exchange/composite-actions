@@ -40,7 +40,7 @@ jobs:
       - name: Merge Main into Feature Branch
         run: |
           git checkout ${{ inputs.update_branch }}
-          git merge origin/${{ inputs.source_branch }} -X${{ inputs.update_strategy }} --no-edit
+          git merge origin/${{ inputs.source_branch }} -X ${{ inputs.update_strategy }} --no-edit
 
       - name: Push Changes to Remote
         run: git push origin ${{ inputs.update_branch }}
