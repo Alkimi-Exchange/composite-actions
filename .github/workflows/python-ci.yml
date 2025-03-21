@@ -109,7 +109,7 @@ jobs:
   release-please:
     needs: [docker_build, code_quality_sonar, security_scan_snyk]
     if: success()
-    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@main
+    uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@feature/refactor
     with:
       release-type: "python"
       gcp-project-id: ${{ inputs.gcp-project-id }}
