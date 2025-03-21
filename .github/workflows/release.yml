@@ -3,10 +3,6 @@ name: release-please
 on:
   workflow_call:
     inputs:
-      release-type:
-        description: "release-type"
-        required: true
-        type: string
       gcp-project-id: 
         description: "GCP Project Id"
         required: true
@@ -27,7 +23,8 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          release-type: ${{ inputs.release-type }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
 
       - uses: actions/checkout@v4
         if: ${{ steps.release.outputs.releases_created }}

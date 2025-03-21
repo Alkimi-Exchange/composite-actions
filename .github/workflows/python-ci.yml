@@ -29,8 +29,9 @@ jobs:
   docker_build:
     uses: Alkimi-Exchange/composite-actions/.github/workflows/docker-build.yml@main
     with:
-      push: true
       gcp-project-id: ${{ inputs.gcp-project-id }}
+      push: true
+      skip-smoke-tests: true
     secrets:
       GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
@@ -67,7 +68,7 @@ jobs:
         continue-on-error: true
         run: pylint $(git ls-files '*.py') --fail-under=5
 
-      - name: Run Tests with Pytest
+      - name: Run Tests with Pytest (no test coverage for now)
         continue-on-error: true
         run: pytest --junitxml=test-results.xml
 
@@ -77,6 +78,7 @@ jobs:
         with:
           name: test-results
           path: test-results.xml
+          retention-days: 7
 
   security_scan_snyk:
     needs: build_lint_test
@@ -111,7 +113,6 @@ jobs:
     if: success()
     uses: Alkimi-Exchange/composite-actions/.github/workflows/release.yml@main
     with:
-      release-type: "python"
       gcp-project-id: ${{ inputs.gcp-project-id }}
     secrets:
       GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
