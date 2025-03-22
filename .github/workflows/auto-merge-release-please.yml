@@ -13,8 +13,16 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'github-actions[bot]' && contains(github.event.pull_request.title, 'release-please')
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Enable auto-merge
         run: |
-          gh pr merge --auto --squash ${{ github.event.pull_request.html_url }}
+          echo "Enabling auto-merge for PR: ${{ github.event.pull_request.html_url }}"
+          gh pr merge --auto --squash ${{ github.event.pull_request.html_url }} || {
+            echo "Failed to enable auto-merge. The PR might not be in a mergeable state or lacks required permissions."
+            exit 1
+          }
+          echo "Auto-merge enabled successfully."
         env:
           GITHUB_TOKEN: ${{ github.token }}
