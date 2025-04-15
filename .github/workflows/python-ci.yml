@@ -36,7 +36,7 @@ jobs:
       GCR_JSON_KEY: ${{ secrets.GCR_JSON_KEY }}
 
   build_lint_test:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
   security_scan_snyk:
     needs: build_lint_test
     if: success()
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
   code_quality_sonar:
     needs: build_lint_test
     if: success()
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
         with:

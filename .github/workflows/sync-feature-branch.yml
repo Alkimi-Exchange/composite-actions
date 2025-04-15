@@ -20,7 +20,7 @@ on:
 jobs:
   sync-feature-branch:
     name: Sync Feature Branch with Main
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout Source Branch

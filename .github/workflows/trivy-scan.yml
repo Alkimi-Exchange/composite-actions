@@ -8,7 +8,7 @@ on:
 jobs:
   scan:
     name: Scan
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Get Image Tag
         run: |
